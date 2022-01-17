@@ -1,0 +1,8 @@
+FROM openjdk:8
+MAINTAINER wujian@4paradigm.com
+USER root
+WORKDIR /root
+ENV LANG C.UTF-8
+RUN mkdir /root/project &&  chmod -R 777 /root/project
+COPY ./project/ /root/project/
+ENTRYPOINT ["/bin/bash","/root/project/bin/start.sh"]

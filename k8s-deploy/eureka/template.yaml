@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ deployName }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ projectName }}-{{ deployName }}
+spec:
+  selector:
+     matchLabels:
+        app: {{ projectName }}-{{ deployName }}
+  replicas: {{ replicas }}
+  template:
+      metadata:
+        labels:
+          app: {{ projectName }}-{{ deployName }}
+      spec:
+        containers:
+        - name: {{ deployName }}
+          image: {{ mirror }}
+          imagePullPolicy: IfNotPresent
+          workingDir: /root
+          env:
+          - name: TZ
+            value: Asia/Shanghai
+          volumeMounts:
+          - name: {{ deployName }}-conf
+            mountPath: /root/project/conf
+          ports:
+          - name: web
+            containerPort: {{ port }}
+            #hostPort: {{ port }}
+          resources:
+            limits:
+              cpu: {{ cpuLimit }}
+              memory: {{ memoryLimit }}
+            requests:
+              cpu: {{ cpuRequest }}
+              memory: {{ memoryRequest }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ port }}
+            initialDelaySeconds: 5
+            timeoutSeconds: 10
+            periodSeconds: 10
+        volumes:
+        - name: {{ deployName }}-conf
+          configMap:
+            name: {{ deployName }}-conf
+
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ deployName }}-svc
+  namespace: {{ namespace }}
+spec:
+  ports:
+  - name: web
+    nodePort: 30020
+    port: {{ port }}
+    protocol: TCP
+    targetPort: {{ port }}
+  selector:
+    app: {{ projectName }}-{{ deployName }}
+  type: NodePort
+

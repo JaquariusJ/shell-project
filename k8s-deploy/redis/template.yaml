@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ deployName }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ projectName }}-{{ deployName }}
+spec: 
+  capacity: 
+    storage: 5Gi
+  accessModes:
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs: 
+    server: {{ nfsServer }}
+    path: {{ nfsPath }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: {{ deployName }}
+  namespace: {{ namespace }}
+spec: 
+  accessModes:
+  - ReadWriteMany
+  resources: 
+    requests: 
+      storage: 5Gi
+  selector: 
+    matchLabels: 
+       app: {{ projectName }}-{{ deployName }}
+
+
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ deployName }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ projectName }}-{{ deployName }}
+spec:
+  replicas: {{ replicas }}
+  selector: 
+    matchLabels: 
+      app: {{ projectName }}-{{ deployName }}
+  template:
+      metadata:
+        labels:
+          app: {{ projectName }}-{{ deployName }}
+      spec:
+        containers:
+        - name: {{ deployName }}
+          image: {{ mirror }}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+          - name: {{ deployName }}-data
+            mountPath: /data
+          - name: {{ deployName }}-conf
+            mountPath: /etc/redis/redis.conf
+          ports:
+          - name: {{ deployName }}
+            containerPort: {{ port }}
+        volumes:
+        - name: {{ deployName }}-conf
+          configMap: 
+             name: {{ deployName }}-conf
+        - name: {{ deployName }}-data
+          persistentVolumeClaim: 
+            claimName: {{ deployName }}
+            #hostPath: 
+            #path: /root/nuclearpower/mysql/project/data 
+
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ deployName }}-svc
+  namespace: {{ namespace }}
+spec:
+  ports:
+  - name: {{ deployName }}
+    nodePort: 30079
+    port: {{ port }}
+    targetPort: {{ port }}
+  selector:
+    app: {{ projectName }}-{{ deployName }}
+  type: NodePort
+
